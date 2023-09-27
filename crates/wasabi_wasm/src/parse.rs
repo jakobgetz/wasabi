@@ -645,6 +645,11 @@ fn parse_instr(
         wp::I64ReinterpretF64 => Unary(UnaryOp::I64ReinterpretF64),
         wp::F32ReinterpretI32 => Unary(UnaryOp::F32ReinterpretI32),
         wp::F64ReinterpretI64 => Unary(UnaryOp::F64ReinterpretI64),
+        wp::I32Extend8S => Unary(UnaryOp::I32Extend8S),
+        wp::I32Extend16S => Unary(UnaryOp::I32Extend16S),
+        wp::I64Extend8S => Unary(UnaryOp::I64Extend8S),
+        wp::I64Extend16S => Unary(UnaryOp::I64Extend16S),
+        wp::I64Extend32S => Unary(UnaryOp::I64Extend32S),
 
         wp::I32Eq => Binary(BinaryOp::I32Eq),
         wp::I32Ne => Binary(BinaryOp::I32Ne),
@@ -723,11 +728,6 @@ fn parse_instr(
         wp::F64Max => Binary(BinaryOp::F64Max),
         wp::F64Copysign => Binary(BinaryOp::F64Copysign),
 
-        wp::I32Extend8S
-        | wp::I32Extend16S
-        | wp::I64Extend8S
-        | wp::I64Extend16S
-        | wp::I64Extend32S => Err(ParseIssue::unsupported(offset, WasmExtension::SignExtensionOps))?,
 
         wp::I32TruncSatF32S
         | wp::I32TruncSatF32U
