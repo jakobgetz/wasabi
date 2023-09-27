@@ -625,12 +625,20 @@ fn parse_instr(
         wp::I32TruncF32U => Unary(UnaryOp::I32TruncF32U),
         wp::I32TruncF64S => Unary(UnaryOp::I32TruncF64S),
         wp::I32TruncF64U => Unary(UnaryOp::I32TruncF64U),
+        wp::I32TruncSatF32S => Unary(UnaryOp::I32TruncSatF32S),
+        wp::I32TruncSatF32U => Unary(UnaryOp::I32TruncSatF32U),
+        wp::I32TruncSatF64S => Unary(UnaryOp::I32TruncSatF64S),
+        wp::I32TruncSatF64U => Unary(UnaryOp::I32TruncSatF64U),
         wp::I64ExtendI32S => Unary(UnaryOp::I64ExtendI32S),
         wp::I64ExtendI32U => Unary(UnaryOp::I64ExtendI32U),
         wp::I64TruncF32S => Unary(UnaryOp::I64TruncF32S),
         wp::I64TruncF32U => Unary(UnaryOp::I64TruncF32U),
         wp::I64TruncF64S => Unary(UnaryOp::I64TruncF64S),
         wp::I64TruncF64U => Unary(UnaryOp::I64TruncF64U),
+        wp::I64TruncSatF32S => Unary(UnaryOp::I64TruncSatF32S),
+        wp::I64TruncSatF32U => Unary(UnaryOp::I64TruncSatF32U),
+        wp::I64TruncSatF64S => Unary(UnaryOp::I64TruncSatF64S),
+        wp::I64TruncSatF64U => Unary(UnaryOp::I64TruncSatF64U),
         wp::F32ConvertI32S => Unary(UnaryOp::F32ConvertI32S),
         wp::F32ConvertI32U => Unary(UnaryOp::F32ConvertI32U),
         wp::F32ConvertI64S => Unary(UnaryOp::F32ConvertI64S),
@@ -729,14 +737,6 @@ fn parse_instr(
         wp::F64Copysign => Binary(BinaryOp::F64Copysign),
 
 
-        wp::I32TruncSatF32S
-        | wp::I32TruncSatF32U
-        | wp::I32TruncSatF64S
-        | wp::I32TruncSatF64U
-        | wp::I64TruncSatF32S
-        | wp::I64TruncSatF32U
-        | wp::I64TruncSatF64S
-        | wp::I64TruncSatF64U => Err(ParseIssue::unsupported(offset, WasmExtension::NontrappingFloatToInt))?,
 
         wp::MemoryInit { data_index: _, mem: _ }
         | wp::DataDrop { data_index: _ }
