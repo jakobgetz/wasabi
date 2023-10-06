@@ -15,6 +15,7 @@ use wasabi_wasm::MemoryOp;
 use wasabi_wasm::Module;
 use wasabi_wasm::Mutability;
 use wasabi_wasm::Val;
+use wasabi_wasm::ValType;
 use wasabi_wasm::ValType::*;
 
 use crate::options::Hook;
@@ -47,6 +48,7 @@ pub fn add_hooks(
     for table in &mut module.tables {
         if table.export.is_empty() {
             table.export.push("__wasabi_table".into());
+            break;
         }
     }
     // FIXME is this a valid workaround for wrong Firefox exported function .name property?
@@ -600,6 +602,53 @@ pub fn add_hooks(
                     }
                 }
 
+                TypedSelect(ty) => {
+                    assert_eq!(type_stack.pop_val(), I32, "select condition should be i32");
+                    assert_eq!(type_stack.pop_val(), ty, "select argument should match given ty");
+                    assert_eq!(type_stack.pop_val(), ty, "select argument should match given ty");
+                    type_stack.push_val(ty);
+                    
+                    if enabled_hooks.contains(Hook::Drop) {
+                        let condition_tmp = function.add_fresh_local(I32);
+                        let arg_tmps = function.add_fresh_locals(&[ty, ty]);
+
+                        save_stack_to_locals(&mut instrumented_body, &[arg_tmps[0], arg_tmps[1], condition_tmp]);
+                        instrumented_body.extend_from_slice(&[
+                            instr.clone(),
+                            location.0,
+                            location.1,
+                            Local(Get, condition_tmp),
+                        ]);
+                        restore_locals_with_i64_handling(&mut instrumented_body, arg_tmps, function);
+                        // replace select with hook call
+                        instrumented_body.push(hooks.instr(&instr, &[ty, ty]));
+                    } else {
+                        instrumented_body.push(instr);
+                    }
+                }
+                RefIsNull => {
+                    let ty = type_stack.pop_val();
+                    let t = match ty {
+                        ValType::Ref(refty) => refty,
+                        _ => panic!("ref.is_null on non-ref type {:?}", ty)
+                    };
+                    type_stack.push_val(I32);
+
+                    if enabled_hooks.contains(Hook::RefIsNull) {
+                        let result_tmp = function.add_fresh_local(I32);
+
+                        instrumented_body.extend_from_slice(&[
+                            instr.clone(),
+                            Local(Tee, result_tmp),
+                            location.0,
+                            location.1,
+                            Local(Get, result_tmp),
+                            hooks.instr(&instr, &[ValType::Ref(t)])
+                        ]);
+                    } else {
+                        instrumented_body.push(instr);
+                    }
+                }
 
                 /* Variable Instructions */
 
@@ -680,6 +729,172 @@ pub fn add_hooks(
                     }
                 }
 
+                MemoryFill | MemoryCopy | MemoryInit(_) => {
+                    type_stack.instr(&instr.simple_type().unwrap());
+
+                    if enabled_hooks.contains(Hook::MemoryElse) {
+                        let input_1_tmp = function.add_fresh_local(I32);
+                        let input_2_tmp = function.add_fresh_local(I32);
+                        let input_3_tmp = function.add_fresh_local(I32);
+
+                        instrumented_body.extend_from_slice(&[
+                            Local(Set, input_3_tmp),
+                            Local(Set, input_2_tmp),
+                            Local(Tee, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            Local(Get, input_3_tmp),
+                            instr.clone(),
+                            location.0,
+                            location.1,
+                            Local(Get, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            Local(Get, input_3_tmp),
+                            hooks.instr(&instr, &[])
+                        ]);
+                    } else {
+                        instrumented_body.push(instr);
+                    }
+                },
+                TableGet(table_idx) => {
+                    let t = module_info.read().tables[table_idx.to_usize()];
+                    type_stack.instr(&FunctionType::new(&[I32], &[ValType::Ref(t)]));
+
+                    if enabled_hooks.contains(Hook::TableGet) {
+                        let input_tmp = function.add_fresh_local(I32);
+                        let result_tmp = function.add_fresh_local(ValType::Ref(t));
+
+                        instrumented_body.extend_from_slice(&[
+                            Local(Tee, input_tmp),
+                            instr.clone(),
+                            Local(Tee, result_tmp),
+                            location.0,
+                            location.1,
+                            Local(Get, input_tmp),
+                            Local(Get, result_tmp),
+                            hooks.instr(&instr, &[ValType::Ref(t)])
+                        ]);
+                    } else {
+                        instrumented_body.push(instr);
+                    }
+                },
+                TableSet(table_idx) => {
+                    let t = module_info.read().tables[table_idx.to_usize()];
+                    type_stack.instr(&FunctionType::new(&[I32, ValType::Ref(t)], &[]));
+
+                    if enabled_hooks.contains(Hook::TableSet) {
+                        let input_1_tmp = function.add_fresh_local(I32);
+                        let input_2_tmp = function.add_fresh_local(ValType::Ref(t));
+
+                        instrumented_body.extend_from_slice(&[
+                            Local(Set, input_2_tmp),
+                            Local(Tee, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            instr.clone(),
+                            location.0,
+                            location.1,
+                            Local(Get, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            hooks.instr(&instr, &[ValType::Ref(t)])
+                        ]);
+                    } else {
+                        instrumented_body.push(instr);
+                    }
+                }
+                TableSize(_) => {
+                    type_stack.instr(&instr.simple_type().unwrap());
+
+                    if enabled_hooks.contains(Hook::TableSize) {
+                        let result_tmp = function.add_fresh_local(I32);
+                        instrumented_body.extend_from_slice(&[
+                            instr.clone(),
+                            Local(Tee, result_tmp),
+                            location.0,
+                            location.1,
+                            Local(Get, result_tmp),
+                            hooks.instr(&instr, &[])
+                        ]);
+                    } else {
+                        instrumented_body.push(instr);
+                    }
+                }
+                TableGrow(table_idx) => {
+                    let t = module_info.read().tables[table_idx.to_usize()];
+                    type_stack.instr(&FunctionType::new(&[ValType::Ref(t), I32], &[I32]));
+
+                    if enabled_hooks.contains(Hook::TableGrow) {
+                        let input_1_tmp = function.add_fresh_local(ValType::Ref(t));
+                        let input_2_tmp = function.add_fresh_local(I32);
+                        let result_tmp = function.add_fresh_local(I32);
+                        instrumented_body.extend_from_slice(&[
+                            Local(Set, input_2_tmp),
+                            Local(Tee, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            instr.clone(),
+                            Local(Tee, result_tmp),
+                            location.0,
+                            location.1,
+                            Local(Get, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            Local(Get, result_tmp),
+                            hooks.instr(&instr, &[ValType::Ref(t)])
+                        ]);
+                    } else {
+                        instrumented_body.push(instr);
+                    }
+                },
+                TableFill(table_idx) => {                    
+                    let t = module_info.read().tables[table_idx.to_usize()];
+                    type_stack.instr(&FunctionType::new(&[I32, ValType::Ref(t), I32], &[]));
+
+                    if enabled_hooks.contains(Hook::TableFill) {
+                        let input_1_tmp = function.add_fresh_local(I32);
+                        let input_2_tmp = function.add_fresh_local(ValType::Ref(t));
+                        let input_3_tmp = function.add_fresh_local(I32);
+
+                        instrumented_body.extend_from_slice(&[
+                            Local(Set, input_3_tmp),
+                            Local(Set, input_2_tmp),
+                            Local(Tee, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            Local(Get, input_3_tmp),
+                            instr.clone(),
+                            location.0,
+                            location.1,
+                            Local(Get, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            Local(Get, input_3_tmp),
+                            hooks.instr(&instr, &[ValType::Ref(t)])
+                        ]);
+                    } else {
+                        instrumented_body.push(instr);
+                    }
+                }
+                TableCopy(_, _) | TableInit(_, _) => {                    
+                    type_stack.instr(&instr.simple_type().unwrap());
+
+                    if enabled_hooks.contains(Hook::TableCopy) {
+                        let input_1_tmp = function.add_fresh_local(I32);
+                        let input_2_tmp = function.add_fresh_local(I32);
+                        let input_3_tmp = function.add_fresh_local(I32);
+
+                        instrumented_body.extend_from_slice(&[
+                            Local(Set, input_3_tmp),
+                            Local(Set, input_2_tmp),
+                            Local(Tee, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            Local(Get, input_3_tmp),
+                            instr.clone(),
+                            location.0,
+                            location.1,
+                            Local(Get, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            Local(Get, input_3_tmp),
+                            hooks.instr(&instr, &[])
+                        ]);
+                    } else {
+                        instrumented_body.push(instr);
+                    }
+                }
                 /* rest are "grouped instructions", i.e., where many instructions can be handled in a similar manner */
 
                 Load(op, memarg) => {
@@ -768,6 +983,24 @@ pub fn add_hooks(
                         instrumented_body.push(instr);
                     }
                 }
+                RefNull(ty) => {
+                    let valty = ValType::Ref(ty);
+                    type_stack.push_val(valty);
+                    instrumented_body.push(instr.clone());
+                },
+                RefFunc(_) => {
+                    // TODO: add validation logic
+                    type_stack.push_val(ValType::Ref(wasabi_wasm::RefType::FuncRef));
+                    instrumented_body.push(instr.clone());
+                }
+                ElemDrop(_) => {
+                    // TODO: add validation logic
+                    instrumented_body.push(instr.clone());
+                }
+                DataDrop(_) => {
+                    // TODO: add validation logic
+                    instrumented_body.push(instr.clone());
+                }
             }
         }
 
@@ -819,18 +1052,21 @@ impl ToConst for Label {
 impl BlockStackElement {
     fn append_end_hook_args(&self, append_to: &mut Vec<Instr>, fidx: Idx<Function>) {
         match self {
-            BlockStackElement::Function { end } => append_to.extend_from_slice(&[
-                fidx.to_const(), 
-                end.to_const()
-            ]),
+            BlockStackElement::Function { end } => {
+                append_to.extend_from_slice(&[fidx.to_const(), end.to_const()])
+            }
             BlockStackElement::Block { begin, end }
             | BlockStackElement::Loop { begin, end }
-            | BlockStackElement::If { begin_if: begin, end, .. } => append_to.extend_from_slice(&[
-                fidx.to_const(),
-                end.to_const(),
-                begin.to_const()
-            ]),
-            BlockStackElement::Else { begin_else, begin_if, end } => append_to.extend_from_slice(&[
+            | BlockStackElement::If {
+                begin_if: begin,
+                end,
+                ..
+            } => append_to.extend_from_slice(&[fidx.to_const(), end.to_const(), begin.to_const()]),
+            BlockStackElement::Else {
+                begin_else,
+                begin_if,
+                end,
+            } => append_to.extend_from_slice(&[
                 fidx.to_const(),
                 end.to_const(),
                 begin_else.to_const(),
@@ -858,7 +1094,8 @@ fn generate_js(module_info: ModuleInfo, hooks: &[String], node_js: bool) -> Stri
 *   - generated from program-to-instrument: static information and low-level hooks
 */
 
-"#.to_string();
+"#
+    .to_string();
 
     if node_js {
         // For Node.js, write the long.js dependency to a separate file (in main) and
@@ -873,10 +1110,12 @@ fn generate_js(module_info: ModuleInfo, hooks: &[String], node_js: bool) -> Stri
         //    - needs to be run after every instrumentation
         // * Alternative B: compile Wasabi itself to WebAssembly, instrument at runtime
         result.push_str("// long.js\n");
-        result.push_str(include_str!("../../../js/long.js/long.js")
-            .lines()
-            .next()
-            .expect("could not include long.js dependency"));
+        result.push_str(
+            include_str!("../../../js/long.js/long.js")
+                .lines()
+                .next()
+                .expect("could not include long.js dependency"),
+        );
     }
     result.push_str("\n\n");
 

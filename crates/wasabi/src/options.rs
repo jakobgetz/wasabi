@@ -99,6 +99,17 @@ pub enum Hook {
 
     MemorySize,
     MemoryGrow,
+    MemoryElse,
+
+    TableSize,
+    TableGrow,
+    TableGet,
+    TableSet,
+    TableFill,
+    TableCopy,
+    TableInit,
+
+    RefIsNull,
 
     Local,
     Global,

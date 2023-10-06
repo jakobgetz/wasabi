@@ -19,7 +19,7 @@ use std::sync::RwLock;
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap;
 
-use crate::ValType;
+use crate::{ValType, RefType};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum FunctionType {
@@ -196,6 +196,7 @@ fn inspect_function_types() {
     println!("{:?}", FunctionType::new(&[], &[]));
     println!("{:?}", FunctionType::new(&[ValType::I32], &[]));
     println!("{:?}", FunctionType::new(&[], &[ValType::I32]));
+    println!("{:?}", FunctionType::new(&[ValType::I32, ValType::Ref(RefType::FuncRef)], &[]));
     println!("{:?}", FunctionType::new(&[], &[ValType::I32, ValType::I32, ValType::I32, ValType::I32, ValType::I32, ValType::I32]));
     println!("{:?}", FunctionType::new(&[], &[ValType::I32, ValType::I32, ValType::I32, ValType::I32, ValType::I32, ValType::I64]));
     println!("{:?}", FunctionType::new(&[], &[ValType::I32, ValType::I32, ValType::I32, ValType::I32, ValType::I32, ValType::I32]));
@@ -209,7 +210,9 @@ const fn val_type_to_goedel_number(val_type: ValType) -> usize {
         ValType::I64 => 1,
         ValType::F32 => 2,
         ValType::F64 => 3,
-    }
+        ValType::Ref(RefType::FuncRef) => 4,
+        ValType::Ref(RefType::ExternRef) => 5,
+}
 }
 
 const fn goedel_number_to_val_type(goedel_number: usize) -> Option<ValType> {
@@ -218,12 +221,14 @@ const fn goedel_number_to_val_type(goedel_number: usize) -> Option<ValType> {
         1 => Some(ValType::I64),
         2 => Some(ValType::F32),
         3 => Some(ValType::F64),
+        4 => Some(ValType::Ref(RefType::FuncRef)),
+        5 => Some(ValType::Ref(RefType::ExternRef)),
         _ => None,
     }
 }
 
 // Determined by the number of variants of `ValType`.
-const VAL_TYPE_MAX_GOEDEL_NUMBER: usize = 3;
+const VAL_TYPE_MAX_GOEDEL_NUMBER: usize = 5;
 
 #[allow(unused)]
 const fn val_type_seq_max_goedel_number(max_seq_len: u32) -> usize {
