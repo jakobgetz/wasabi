@@ -30,13 +30,13 @@ let Wasabi = {
     ],
 
     // map a table index to a function index
-    resolveTableIdx: function (tableIdx) {
-        if (Wasabi.module.exports === undefined || Wasabi.module.table === undefined) {
+    resolveTableIdx: function (tableIdx, elemIdx) {
+        if (Wasabi.module.exports === undefined || Wasabi.module.tables[tableIdx] === undefined) {
             console.warn("Wasabi: cannot resolve table index without module exports and table (possible reason: exports and table are usually not available during execution of the Wasm start function)");
             return undefined;
         }
 
-        const resolvedFunction = Wasabi.module.table.get(tableIdx);
+        const resolvedFunction = Wasabi.module.tables[tableIdx].get(elemIdx);
         if (resolvedFunction === null) {
             console.warn("Wasabi: resolving indirectly called function failed because table returned `null` at index " + tableIdx);
             return undefined;
@@ -140,7 +140,8 @@ let Wasabi = {
 
     const wireInstanceExports = function(instance) {
         Wasabi.module.exports = instance.exports;
-        Wasabi.module.table = instance.exports[Wasabi.module.info.tableExportName];
+        Wasabi.module.tables = Object.fromEntries(Object.entries(instance.exports).filter(([key]) => Wasabi.module.info.tableExportNames.includes(key)));
+        Wasabi.module.memories = Object.fromEntries(Object.entries(instance.exports).filter(([key]) => Wasabi.module.info.memoryExportNames.includes(key)));
     }
 
     const oldInstantiate = WebAssembly.instantiate;

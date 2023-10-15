@@ -25,7 +25,8 @@ pub struct ModuleInfo {
     pub globals: Vec<ValType>,
     pub start: Option<Idx<Function>>,
     pub tables: Vec<RefType>,
-    pub table_export_name: Option<String>,
+    pub table_export_names: Vec<Option<String>>,
+    pub memory_export_names: Vec<Option<String>>,
     pub br_tables: Vec<BrTableInfo>,
     // For mapping indices of indirectly called functions to the original indices, see
     // `resolveTableIdx` in `runtime.js`.
@@ -40,10 +41,10 @@ impl<'a> From<&'a Module> for ModuleInfo {
             start: module.start,
             tables: module.tables.iter().map(|t| t.ref_type).collect(),
             // if the module has no table, there cannot be a call_indirect, so this null will never be read from JS runtime
-            table_export_name: module
-                .tables
-                .get(0)
-                .and_then(|table| table.export.get(0).cloned()),
+            table_export_names: module
+                .tables.iter().map(|table| table.export.get(0).cloned()).collect(),
+            memory_export_names: module
+                .memories.iter().map(|memory| memory.export.get(0).cloned()).collect(),
             br_tables: vec![],
             original_function_imports_count: module
                 .functions

@@ -289,9 +289,9 @@ impl HookMap {
                 Hook::new(ll_name, args, "call_pre", js_args)
             }
             CallIndirect(_, _) => {
-                let mut args = args!(tableIndex: I32);
+                let mut args = args!(tableIndex: I32, elemIdx: I32);
                 args.extend(polymorphic_tys.iter().enumerate().map(|(i, &ty)| Arg { name: format!("arg{i}"), ty }));
-                let js_args = &format!("Wasabi.resolveTableIdx(tableIndex), [{}], tableIndex", args[1..].iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", "));
+                let js_args = &format!("Wasabi.resolveTableIdx(tableIndex, elemIdx), [{}], elemIdx", args[2..].iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", "));
                 Hook::new(ll_name, args, "call_pre", js_args)
             }
 

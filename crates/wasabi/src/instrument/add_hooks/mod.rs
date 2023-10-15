@@ -45,10 +45,14 @@ pub fn add_hooks(
     node_js: bool,
 ) -> Option<(String, usize)> {
     // make sure table is exported, needed for Wasabi runtime to resolve table indices to function indices.
-    for table in &mut module.tables {
+    for (i, table) in module.tables.iter_mut().enumerate() {
         if table.export.is_empty() {
-            table.export.push("__wasabi_table".into());
-            break;
+            table.export.push(format!("__wasabi_table{i}"));
+        }
+    }
+    for (i, memory) in module.memories.iter_mut().enumerate() {
+        if memory.export.is_empty() {
+            memory.export.push(format!("__wasabi_memory{i}"));
         }
     }
     // FIXME is this a valid workaround for wrong Firefox exported function .name property?
@@ -517,7 +521,7 @@ pub fn add_hooks(
                         instrumented_body.push(instr);
                     }
                 }
-                CallIndirect(ref func_ty, _ /* table idx == 0 in WASM version 1 */) => {
+                CallIndirect(ref func_ty, table_idx) => {
                     type_stack.instr(&instr.simple_type().unwrap());
 
                     if enabled_hooks.contains(Hook::Call) {
@@ -532,6 +536,7 @@ pub fn add_hooks(
                             Local(Get, target_table_idx_tmp),
                             location.0.clone(),
                             location.1.clone(),
+                            table_idx.to_const(),
                             Local(Get, target_table_idx_tmp),
                         ]);
                         restore_locals_with_i64_handling(&mut instrumented_body, arg_tmps, function);
