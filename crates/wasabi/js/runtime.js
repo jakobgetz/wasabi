@@ -140,7 +140,8 @@ let Wasabi = {
 
     const wireInstanceExports = function(instance) {
         Wasabi.module.exports = instance.exports;
-        Wasabi.module.table = instance.exports[Wasabi.module.info.tableExportName];
+        Wasabi.module.tables = Object.fromEntries(Object.entries(instance.exports).filter(([key]) => Wasabi.module.info.tableExportNames.includes(key)));
+        Wasabi.module.memories = Object.fromEntries(Object.entries(instance.exports).filter(([key]) => Wasabi.module.info.memoryExportNames.includes(key)));
     }
 
     const oldInstantiate = WebAssembly.instantiate;

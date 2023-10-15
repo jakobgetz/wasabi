@@ -45,10 +45,14 @@ pub fn add_hooks(
     node_js: bool,
 ) -> Option<(String, usize)> {
     // make sure table is exported, needed for Wasabi runtime to resolve table indices to function indices.
-    for table in &mut module.tables {
+    for (i, table) in module.tables.iter_mut().enumerate() {
         if table.export.is_empty() {
-            table.export.push("__wasabi_table".into());
-            break;
+            table.export.push(format!("__wasabi_table{i}"));
+        }
+    }
+    for (i, memory) in module.memories.iter_mut().enumerate() {
+        if memory.export.is_empty() {
+            memory.export.push(format!("__wasabi_memory{i}"));
         }
     }
     // FIXME is this a valid workaround for wrong Firefox exported function .name property?
