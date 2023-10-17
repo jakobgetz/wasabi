@@ -55,6 +55,12 @@ pub fn add_hooks(
             memory.export.push(format!("__wasabi_memory{i}"));
         }
     }
+
+    for (i, global) in module.globals.iter_mut().enumerate() {
+        if global.export.is_empty() {
+            global.export.push(format!("__wasabi_global{i}"));
+        }
+    }
     // FIXME is this a valid workaround for wrong Firefox exported function .name property?
     //    if let Some(function) = module.functions.first_mut() {
     //        if function.export.is_empty() {
@@ -675,7 +681,7 @@ pub fn add_hooks(
                     }
                 }
                 Global(op, global_idx) => {
-                    let global_ty = module_info.read().globals[global_idx.to_usize()];
+                    let global_ty = module_info.read().globals[global_idx.to_usize()].val_type;
 
                     type_stack.instr(&op.to_type(global_ty));
 
