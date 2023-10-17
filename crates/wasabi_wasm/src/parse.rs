@@ -265,7 +265,8 @@ pub fn parse_module(bytes: &[u8]) -> Result<(Module, Offsets, ParseWarnings), Pa
                             let mut offset_instrs = Vec::new();
                             items_reader.into_iter().for_each(|func_idx| {
                                 func_idx.map(|func_idx| {
-                                    offset_instrs.push(Instr::RefFunc(func_idx.into()))
+                                    offset_instrs.push(Instr::RefFunc(func_idx.into()));
+                                    offset_instrs.push(Instr::End)
                                 });
                             });
                             offset_instrs.chunks(2).map(|x| x.to_vec()).collect()
