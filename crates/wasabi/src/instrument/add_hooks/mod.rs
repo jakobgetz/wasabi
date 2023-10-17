@@ -760,12 +760,12 @@ pub fn add_hooks(
                     }
                 },
                 TableGet(table_idx) => {
-                    let t = module_info.read().tables[table_idx.to_usize()];
-                    type_stack.instr(&FunctionType::new(&[I32], &[ValType::Ref(t)]));
+                    let ref_type = module_info.read().tables[table_idx.to_usize()].ref_type;
+                    type_stack.instr(&FunctionType::new(&[I32], &[ValType::Ref(ref_type)]));
 
                     if enabled_hooks.contains(Hook::TableGet) {
                         let input_tmp = function.add_fresh_local(I32);
-                        let result_tmp = function.add_fresh_local(ValType::Ref(t));
+                        let result_tmp = function.add_fresh_local(ValType::Ref(ref_type));
 
                         instrumented_body.extend_from_slice(&[
                             Local(Tee, input_tmp),
@@ -775,19 +775,19 @@ pub fn add_hooks(
                             location.1,
                             Local(Get, input_tmp),
                             Local(Get, result_tmp),
-                            hooks.instr(&instr, &[ValType::Ref(t)])
+                            hooks.instr(&instr, &[ValType::Ref(ref_type)])
                         ]);
                     } else {
                         instrumented_body.push(instr);
                     }
                 },
                 TableSet(table_idx) => {
-                    let t = module_info.read().tables[table_idx.to_usize()];
-                    type_stack.instr(&FunctionType::new(&[I32, ValType::Ref(t)], &[]));
+                    let ref_type = module_info.read().tables[table_idx.to_usize()].ref_type;
+                    type_stack.instr(&FunctionType::new(&[I32, ValType::Ref(ref_type)], &[]));
 
                     if enabled_hooks.contains(Hook::TableSet) {
                         let input_1_tmp = function.add_fresh_local(I32);
-                        let input_2_tmp = function.add_fresh_local(ValType::Ref(t));
+                        let input_2_tmp = function.add_fresh_local(ValType::Ref(ref_type));
 
                         instrumented_body.extend_from_slice(&[
                             Local(Set, input_2_tmp),
@@ -798,7 +798,7 @@ pub fn add_hooks(
                             location.1,
                             Local(Get, input_1_tmp),
                             Local(Get, input_2_tmp),
-                            hooks.instr(&instr, &[ValType::Ref(t)])
+                            hooks.instr(&instr, &[ValType::Ref(ref_type)])
                         ]);
                     } else {
                         instrumented_body.push(instr);
@@ -822,11 +822,11 @@ pub fn add_hooks(
                     }
                 }
                 TableGrow(table_idx) => {
-                    let t = module_info.read().tables[table_idx.to_usize()];
-                    type_stack.instr(&FunctionType::new(&[ValType::Ref(t), I32], &[I32]));
+                    let ref_type = module_info.read().tables[table_idx.to_usize()].ref_type;
+                    type_stack.instr(&FunctionType::new(&[ValType::Ref(ref_type), I32], &[I32]));
 
                     if enabled_hooks.contains(Hook::TableGrow) {
-                        let input_1_tmp = function.add_fresh_local(ValType::Ref(t));
+                        let input_1_tmp = function.add_fresh_local(ValType::Ref(ref_type));
                         let input_2_tmp = function.add_fresh_local(I32);
                         let result_tmp = function.add_fresh_local(I32);
                         instrumented_body.extend_from_slice(&[
@@ -840,19 +840,19 @@ pub fn add_hooks(
                             Local(Get, input_1_tmp),
                             Local(Get, input_2_tmp),
                             Local(Get, result_tmp),
-                            hooks.instr(&instr, &[ValType::Ref(t)])
+                            hooks.instr(&instr, &[ValType::Ref(ref_type)])
                         ]);
                     } else {
                         instrumented_body.push(instr);
                     }
                 },
                 TableFill(table_idx) => {                    
-                    let t = module_info.read().tables[table_idx.to_usize()];
-                    type_stack.instr(&FunctionType::new(&[I32, ValType::Ref(t), I32], &[]));
+                    let ref_type = module_info.read().tables[table_idx.to_usize()].ref_type;
+                    type_stack.instr(&FunctionType::new(&[I32, ValType::Ref(ref_type), I32], &[]));
 
                     if enabled_hooks.contains(Hook::TableFill) {
                         let input_1_tmp = function.add_fresh_local(I32);
-                        let input_2_tmp = function.add_fresh_local(ValType::Ref(t));
+                        let input_2_tmp = function.add_fresh_local(ValType::Ref(ref_type));
                         let input_3_tmp = function.add_fresh_local(I32);
 
                         instrumented_body.extend_from_slice(&[
@@ -867,7 +867,7 @@ pub fn add_hooks(
                             Local(Get, input_1_tmp),
                             Local(Get, input_2_tmp),
                             Local(Get, input_3_tmp),
-                            hooks.instr(&instr, &[ValType::Ref(t)])
+                            hooks.instr(&instr, &[ValType::Ref(ref_type)])
                         ]);
                     } else {
                         instrumented_body.push(instr);

@@ -5,8 +5,10 @@ use wasabi_wasm::FunctionType;
 use wasabi_wasm::Idx;
 use wasabi_wasm::Instr;
 use wasabi_wasm::Label;
+use wasabi_wasm::Memory;
 use wasabi_wasm::Module;
 use wasabi_wasm::RefType;
+use wasabi_wasm::Table;
 use wasabi_wasm::ValType;
 
 use super::block_stack::BlockStack;
@@ -24,7 +26,8 @@ pub struct ModuleInfo {
     #[serde(serialize_with = "serialize_types")]
     pub globals: Vec<ValType>,
     pub start: Option<Idx<Function>>,
-    pub tables: Vec<RefType>,
+    pub tables: Vec<TableInfo>,
+    pub memories: Vec<MemoryInfo>,
     pub table_export_names: Vec<Option<String>>,
     pub memory_export_names: Vec<Option<String>>,
     pub br_tables: Vec<BrTableInfo>,
@@ -36,21 +39,62 @@ pub struct ModuleInfo {
 impl<'a> From<&'a Module> for ModuleInfo {
     fn from(module: &Module) -> Self {
         ModuleInfo {
-            functions: module.functions.iter().map(Into::into).collect(),
+            functions: module.functions.iter().map(|f| Into::into(f)).collect(),
             globals: module.globals.iter().map(|g| g.type_.0).collect(),
             start: module.start,
-            tables: module.tables.iter().map(|t| t.ref_type).collect(),
+            tables: module.tables.iter().map(Into::into).collect(),
+            memories: module.memories.iter().map(Into::into).collect(),
             // if the module has no table, there cannot be a call_indirect, so this null will never be read from JS runtime
             table_export_names: module
-                .tables.iter().map(|table| table.export.get(0).cloned()).collect(),
+                .tables
+                .iter()
+                .map(|table| table.export.get(0).cloned())
+                .collect(),
             memory_export_names: module
-                .memories.iter().map(|memory| memory.export.get(0).cloned()).collect(),
+                .memories
+                .iter()
+                .map(|memory| memory.export.get(0).cloned())
+                .collect(),
             br_tables: vec![],
             original_function_imports_count: module
                 .functions
                 .iter()
                 .filter_map(Function::import)
                 .count(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryInfo {
+    pub import: Option<(String, String)>,
+    pub export: Vec<String>,
+}
+
+impl<'a> From<&'a Memory> for MemoryInfo {
+    fn from(memory: &Memory) -> MemoryInfo {
+        MemoryInfo {
+            import: memory.import.clone(),
+            export: memory.export.clone(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TableInfo {
+    pub import: Option<(String, String)>,
+    pub export: Vec<String>,
+    pub ref_type: RefType,
+}
+
+impl<'a> From<&'a Table> for TableInfo {
+    fn from(table: &Table) -> TableInfo {
+        TableInfo {
+            import: table.import.clone(),
+            export: table.export.clone(),
+            ref_type: table.ref_type,
         }
     }
 }

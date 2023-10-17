@@ -140,8 +140,18 @@ let Wasabi = {
 
     const wireInstanceExports = function(instance) {
         Wasabi.module.exports = instance.exports;
-        Wasabi.module.tables = Object.fromEntries(Object.entries(instance.exports).filter(([key]) => Wasabi.module.info.tableExportNames.includes(key)));
-        Wasabi.module.memories = Object.fromEntries(Object.entries(instance.exports).filter(([key]) => Wasabi.module.info.memoryExportNames.includes(key)));
+        Wasabi.module.tables = []
+        Wasabi.module.memories = []
+        for (let exp in instance.exports) {
+            if (Wasabi.module.info.tableExportNames.includes(exp)) {
+                Wasabi.module.tables.push(instance.exports[exp])
+            }
+            if (Wasabi.module.info.memoryExportNames.includes(exp)) {
+                Wasabi.module.memories.push(instance.exports[exp])
+            }
+        }
+        // Wasabi.module.tables = Object.fromEntries(Object.entries(instance.exports).filter(([key]) => Wasabi.module.info.tableExportNames.includes(key)));
+        // Wasabi.module.memories = Object.fromEntries(Object.entries(instance.exports).filter(([key]) => Wasabi.module.info.memoryExportNames.includes(key)));
     }
 
     const oldInstantiate = WebAssembly.instantiate;
