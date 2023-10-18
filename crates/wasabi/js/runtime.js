@@ -32,13 +32,13 @@ let Wasabi = {
     // map a table index to a function index
     resolveTableIdx: function (tableIdx, elemIdx) {
         if (Wasabi.module.exports === undefined || Wasabi.module.tables[tableIdx] === undefined) {
-            console.warn("Wasabi: cannot resolve table index without module exports and table (possible reason: exports and table are usually not available during execution of the Wasm start function)");
+            // console.warn("Wasabi: cannot resolve table index without module exports and table (possible reason: exports and table are usually not available during execution of the Wasm start function)");
             return undefined;
         }
 
         const resolvedFunction = Wasabi.module.tables[tableIdx].get(elemIdx);
         if (resolvedFunction === null) {
-            console.warn("Wasabi: resolving indirectly called function failed because table returned `null` at index " + tableIdx);
+            // console.warn("Wasabi: resolving indirectly called function failed because table returned `null` at index " + tableIdx);
             return undefined;
         }
 
@@ -129,7 +129,7 @@ let Wasabi = {
     const importObjectWithHooks = function(importObject) {
         for (const hook of Wasabi.HOOK_NAMES) {
             if (Wasabi.analysis[hook] === undefined) {
-                console.debug("Wasabi: hook", hook, "not provided by Wasabi.analysis, I will use an empty function as a fallback");
+                // console.debug("Wasabi: hook", hook, "not provided by Wasabi.analysis, I will use an empty function as a fallback");
                 Wasabi.analysis[hook] = defaultHooks[hook];
             }
         }
