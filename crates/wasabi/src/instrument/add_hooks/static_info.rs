@@ -116,7 +116,10 @@ pub struct GlobalInfo {
 impl<'a> From<&'a Global> for GlobalInfo {
     fn from(global: &Global) -> GlobalInfo {
         GlobalInfo {
-            import: global.import().clone().map(|(module, name)| (String::from(module), String::from(name))),
+            import: global
+                .import()
+                .clone()
+                .map(|(module, name)| (String::from(module), String::from(name))),
             export: global.export.clone(),
             val_type: global.type_.0,
         }

@@ -55,7 +55,6 @@ pub fn add_hooks(
             memory.export.push(format!("__wasabi_memory{i}"));
         }
     }
-
     for (i, global) in module.globals.iter_mut().enumerate() {
         if global.export.is_empty() {
             global.export.push(format!("__wasabi_global{i}"));
@@ -527,7 +526,7 @@ pub fn add_hooks(
                         instrumented_body.push(instr);
                     }
                 }
-                CallIndirect(ref func_ty, _ /* table idx == 0 in WASM version 1 */) => {
+                CallIndirect(ref func_ty, table_idx) => {
                     type_stack.instr(&instr.simple_type().unwrap());
 
                     if enabled_hooks.contains(Hook::Call) {
@@ -542,6 +541,7 @@ pub fn add_hooks(
                             Local(Get, target_table_idx_tmp),
                             location.0.clone(),
                             location.1.clone(),
+                            table_idx.to_const(),
                             Local(Get, target_table_idx_tmp),
                         ]);
                         restore_locals_with_i64_handling(&mut instrumented_body, arg_tmps, function);
