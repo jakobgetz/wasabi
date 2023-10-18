@@ -150,7 +150,7 @@ let Wasabi = {
             if (Wasabi.module.info.memoryExportNames.includes(exp)) {
                 Wasabi.module.memories.push(instance.exports[exp])
             }
-            if (Wasabi.module.info.globals.includes(exp)) {
+            if (Wasabi.module.info.globalExportNames.includes(exp)) {
                 Wasabi.module.globals.push(instance.exports[exp])
             }
         }
