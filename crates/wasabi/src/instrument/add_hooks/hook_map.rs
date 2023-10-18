@@ -346,8 +346,27 @@ impl HookMap {
         self.get_or_insert(ll_name, generate_hook)
     }
 
-    pub fn begin_function(&self) -> Instr {
-        self.get_or_insert(LowLevelHookName::monomorphic("begin_function"), |ll_name| Hook::new(ll_name, vec![], "begin", "\"function\""))
+    pub fn begin_function(&self, arg_tys: &[ValType]) -> Instr {
+        let ll_name = LowLevelHookName::polymorphic("begin_function", arg_tys);
+        let generate_hook = move |ll_name| {
+            let args = arg_tys
+                .iter()
+                .enumerate()
+                .map(|(i, &ty)| Arg {
+                    name: format!("arg{i}"),
+                    ty,
+                })
+                .collect::<Vec<_>>();
+            let js_args = &format!(
+                "[{}]",
+                args.iter()
+                    .map(Arg::to_lowlevel_long_expr)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+            Hook::new(ll_name, args, "begin_function", js_args)
+        };
+        self.get_or_insert(ll_name, generate_hook)
     }
 
     pub fn begin_block(&self) -> Instr {
