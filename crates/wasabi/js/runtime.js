@@ -149,8 +149,8 @@ let Wasabi = {
             if (Wasabi.module.info.memoryExportNames.includes(exp)) {
                 Wasabi.module.memories.push(instance.exports[exp])
             }
-            if (Wasabi.module.info.tableExportNames.includes(exp)) {
-                Wasabi.module.tables.push(instance.exports[exp])
+            if (Wasabi.module.info.globals.includes(exp)) {
+                Wasabi.module.globals.push(instance.exports[exp])
             }
         }
         // Wasabi.module.tables = Object.fromEntries(Object.entries(instance.exports).filter(([key]) => Wasabi.module.info.tableExportNames.includes(key)));
