@@ -142,6 +142,7 @@ let Wasabi = {
         Wasabi.module.exports = instance.exports;
         Wasabi.module.tables = []
         Wasabi.module.memories = []
+        Wasabi.module.globals = []
         for (let exp in instance.exports) {
             if (Wasabi.module.info.tableExportNames.includes(exp)) {
                 Wasabi.module.tables.push(instance.exports[exp])
