@@ -122,12 +122,12 @@ pub fn add_hooks(
         if enabled_hooks.contains(Hook::Begin) {
             let func = &module_info.read().functions[fidx.to_usize()];
             let input_ty = func.type_.inputs();
-            let get_locals = input_ty.iter().enumerate().map(|(i, _)| Local(Get, i.into())).collect::<Vec<_>>();
+            
             instrumented_body.extend_from_slice(&[
                 fidx.to_const(),
                 Const(Val::I32(-1)),
             ]);
-            instrumented_body.extend_from_slice(&get_locals);
+            input_ty.iter().enumerate().for_each(|(i, ty)| convert_i64_instr(&mut instrumented_body, Local(Get, i.into()), *ty));
             instrumented_body.extend_from_slice(&[
                 hooks.begin_function(input_ty)
             ]);
