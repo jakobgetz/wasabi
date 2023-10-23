@@ -244,30 +244,26 @@ impl HookMap {
             TableGet(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.get has only one argument");
                 let args = args!(index: I32, value: polymorphic_tys[0]);
-                let instr_name = instr.to_name();
-                let js_args = &format!("\"{}\", {}", instr_name, args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", "));
-                Hook::new(ll_name, args, "table.get", js_args)
+                let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
+                Hook::new(ll_name, args, "table_get", js_args)
             }
             TableSet(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.set has only one argument");
                 let args = args!(index: I32, value: polymorphic_tys[0]);
-                let instr_name = instr.to_name();
-                let js_args = &format!("\"{}\", {}", instr_name, args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", "));
-                Hook::new(ll_name, args, "table.set", js_args)
+                let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
+                Hook::new(ll_name, args, "table_set", js_args)
             } 
             TableGrow(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.grow has only one argument");
                 let args = args!(n: polymorphic_tys[0], val: I32, previousElements: I32);
-                let instr_name = instr.to_name();
-                let js_args = &format!("\"{}\", {}", instr_name, args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", "));
-                Hook::new(ll_name, args, "table.grow", js_args)
+                let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
+                Hook::new(ll_name, args, "table_grow", js_args)
             }
             TableFill(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.fill has only one argument");
                 let args = args!(index: I32, value: polymorphic_tys[0], length: I32);
-                let instr_name = instr.to_name();
-                let js_args = &format!("\"{}\", {}", instr_name, args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", "));
-                Hook::new(ll_name, args, "table.fill", js_args)
+                let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
+                Hook::new(ll_name, args, "table_fill", js_args)
             }
             Global(_, _) => {
                 assert_eq!(polymorphic_tys.len(), 1, "global instructions have only one argument");
@@ -308,8 +304,7 @@ impl HookMap {
                 let js_args = &format!("\"{}\", {}", instr_name, args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", "));
                 Hook::new(ll_name, args, "ref.is_null", js_args)
             },
-            RefFunc(_) => todo!(),            
-            TypedSelect(_) => todo!(),            
+            RefFunc(_) => todo!(),                       
             ElemDrop(_) => todo!(),
             DataDrop(_) => todo!(),
         };
