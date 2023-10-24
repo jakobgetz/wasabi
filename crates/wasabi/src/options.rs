@@ -101,13 +101,14 @@ pub enum Hook {
     MemoryGrow,
     MemoryElse,
 
-    TableSize,
-    TableGrow,
     TableGet,
     TableSet,
+    TableSize,
+    TableGrow,
     TableFill,
     TableCopy,
     TableInit,
+    // ElemDrop,
 
     RefIsNull,
 

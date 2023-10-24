@@ -160,9 +160,9 @@ impl HookMap {
             MemoryCopy =>  Hook::new(&ll_name, args!(destination: I32, source: I32, length: I32), &ll_name, "destination, source, length"),
             MemoryInit(_) =>  Hook::new(&ll_name, args!(destination: I32, source: I32, length: I32), &ll_name, "destination, source, length"),
 
-            TableSize(_) => Hook::new(&ll_name, args!(currentSizeEntries: I32), &ll_name, "currentSizeEntries"),
-            TableCopy(_, _) =>  Hook::new(&ll_name, args!(destination: I32, source: I32, length: I32), &ll_name, "destination, source, length"),
-            TableInit(_, _) =>  Hook::new(&ll_name, args!(destination: I32, source: I32, length: I32), &ll_name, "destination, source, length"),
+            TableSize(_) => Hook::new(&ll_name, args!(tableIndex: I32, currentSizeEntries: I32), &ll_name, "tableIndex, currentSizeEntries"),
+            TableCopy(_, _) =>  Hook::new(&ll_name, args!(tableIndex1:I32, tableIndex2: I32, destination: I32, source: I32, length: I32), &ll_name, "tableIndex1, tableIndex2, destination, source, length"),
+            TableInit(_, _) =>  Hook::new(&ll_name, args!(tableIndex: I32, elemIndex: I32, destination: I32, source: I32, length: I32), &ll_name, "tableIndex, elemIndex, destination, source, length"),
              
             Load(op, _) => {
                 let ty = op.to_type().results()[0];
@@ -243,25 +243,25 @@ impl HookMap {
             }
             TableGet(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.get has only one argument");
-                let args = args!(index: I32, value: polymorphic_tys[0]);
+                let args = args!(tableIndex: I32, elemindex: I32, value: polymorphic_tys[0]);
                 let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
                 Hook::new(ll_name, args, "table_get", js_args)
             }
             TableSet(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.set has only one argument");
-                let args = args!(index: I32, value: polymorphic_tys[0]);
+                let args = args!(tableIndex: I32, elemindex: I32, value: polymorphic_tys[0]);
                 let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
                 Hook::new(ll_name, args, "table_set", js_args)
             } 
             TableGrow(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.grow has only one argument");
-                let args = args!(n: polymorphic_tys[0], val: I32, previousElements: I32);
+                let args = args!(tableIndex:I32, n: polymorphic_tys[0], val: I32, previousElements: I32);
                 let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
                 Hook::new(ll_name, args, "table_grow", js_args)
             }
             TableFill(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.fill has only one argument");
-                let args = args!(index: I32, value: polymorphic_tys[0], length: I32);
+                let args = args!(tableIndex: I32, i: I32, value: polymorphic_tys[0], length: I32);
                 let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
                 Hook::new(ll_name, args, "table_fill", js_args)
             }

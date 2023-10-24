@@ -784,6 +784,7 @@ pub fn add_hooks(
                             Local(Tee, result_tmp),
                             location.0,
                             location.1,
+                            table_idx.to_const(),
                             Local(Get, input_tmp),
                             Local(Get, result_tmp),
                             hooks.instr(&instr, &[ValType::Ref(ref_type)])
@@ -807,6 +808,7 @@ pub fn add_hooks(
                             instr.clone(),
                             location.0,
                             location.1,
+                            table_idx.to_const(),
                             Local(Get, input_1_tmp),
                             Local(Get, input_2_tmp),
                             hooks.instr(&instr, &[ValType::Ref(ref_type)])
@@ -815,7 +817,7 @@ pub fn add_hooks(
                         instrumented_body.push(instr);
                     }
                 }
-                TableSize(_) => {
+                TableSize(table_idx) => {
                     type_stack.instr(&instr.simple_type().unwrap());
 
                     if enabled_hooks.contains(Hook::TableSize) {
@@ -825,6 +827,7 @@ pub fn add_hooks(
                             Local(Tee, result_tmp),
                             location.0,
                             location.1,
+                            table_idx.to_const(),
                             Local(Get, result_tmp),
                             hooks.instr(&instr, &[])
                         ]);
@@ -848,6 +851,7 @@ pub fn add_hooks(
                             Local(Tee, result_tmp),
                             location.0,
                             location.1,
+                            table_idx.to_const(),
                             Local(Get, input_1_tmp),
                             Local(Get, input_2_tmp),
                             Local(Get, result_tmp),
@@ -875,6 +879,7 @@ pub fn add_hooks(
                             instr.clone(),
                             location.0,
                             location.1,
+                            table_idx.to_const(),
                             Local(Get, input_1_tmp),
                             Local(Get, input_2_tmp),
                             Local(Get, input_3_tmp),
@@ -884,9 +889,8 @@ pub fn add_hooks(
                         instrumented_body.push(instr);
                     }
                 }
-                TableCopy(_, _) | TableInit(_, _) => {                    
+                TableCopy(table_index_1, table_index_2) => {                    
                     type_stack.instr(&instr.simple_type().unwrap());
-
                     if enabled_hooks.contains(Hook::TableCopy) {
                         let input_1_tmp = function.add_fresh_local(I32);
                         let input_2_tmp = function.add_fresh_local(I32);
@@ -901,6 +905,8 @@ pub fn add_hooks(
                             instr.clone(),
                             location.0,
                             location.1,
+                            table_index_1.to_const(),
+                            table_index_2.to_const(),
                             Local(Get, input_1_tmp),
                             Local(Get, input_2_tmp),
                             Local(Get, input_3_tmp),
@@ -910,6 +916,38 @@ pub fn add_hooks(
                         instrumented_body.push(instr);
                     }
                 }
+                TableInit(table_index, elem_index) => {
+                    type_stack.instr(&instr.simple_type().unwrap());
+                    if enabled_hooks.contains(Hook::TableInit) {
+                        let input_1_tmp = function.add_fresh_local(I32);
+                        let input_2_tmp = function.add_fresh_local(I32);
+                        let input_3_tmp = function.add_fresh_local(I32);
+
+                        instrumented_body.extend_from_slice(&[
+                            Local(Set, input_3_tmp),
+                            Local(Set, input_2_tmp),
+                            Local(Tee, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            Local(Get, input_3_tmp),
+                            instr.clone(),
+                            location.0,
+                            location.1,
+                            table_index.to_const(),
+                            elem_index.to_const(),
+                            Local(Get, input_1_tmp),
+                            Local(Get, input_2_tmp),
+                            Local(Get, input_3_tmp),
+                            hooks.instr(&instr, &[])
+                        ]);
+                    } else {
+                        instrumented_body.push(instr);
+                    }
+                }
+                ElemDrop(_) => {
+                    // TODO: add validation logic
+                    instrumented_body.push(instr.clone());
+                }
+
                 /* rest are "grouped instructions", i.e., where many instructions can be handled in a similar manner */
 
                 Load(op, memarg) => {
@@ -1006,10 +1044,6 @@ pub fn add_hooks(
                 RefFunc(_) => {
                     // TODO: add validation logic
                     type_stack.push_val(ValType::Ref(wasabi_wasm::RefType::FuncRef));
-                    instrumented_body.push(instr.clone());
-                }
-                ElemDrop(_) => {
-                    // TODO: add validation logic
                     instrumented_body.push(instr.clone());
                 }
                 DataDrop(_) => {
