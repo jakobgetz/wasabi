@@ -707,7 +707,7 @@ pub fn add_hooks(
 
                 /* Memory Instructions */
 
-                MemorySize(_ /* memory idx == 0 in WASM version 1 */) => {
+                MemorySize(memory_idx) => {
                     type_stack.instr(&instr.simple_type().unwrap());
 
                     instrumented_body.push(instr.clone());
@@ -716,13 +716,14 @@ pub fn add_hooks(
                         instrumented_body.extend_from_slice(&[
                             location.0,
                             location.1,
+                            memory_idx.to_const(),
                             // optimization: just call memory_size again instead of duplicating result into local
                             instr.clone(),
                             hooks.instr(&instr, &[])
                         ]);
                     }
                 }
-                MemoryGrow(_ /* memory idx == 0 in WASM version 1 */) => {
+                MemoryGrow(memory_idx) => {
                     type_stack.instr(&instr.simple_type().unwrap());
 
                     if enabled_hooks.contains(Hook::MemoryGrow) {
@@ -735,6 +736,7 @@ pub fn add_hooks(
                             Local(Tee, result_tmp),
                             location.0,
                             location.1,
+                            memory_idx.to_const(),
                             Local(Get, input_tmp),
                             Local(Get, result_tmp),
                             hooks.instr(&instr, &[])
@@ -761,6 +763,7 @@ pub fn add_hooks(
                             instr.clone(),
                             location.0,
                             location.1,
+                            Const(Val::I32(0)),
                             Local(Get, input_1_tmp),
                             Local(Get, input_2_tmp),
                             Local(Get, input_3_tmp),
@@ -964,6 +967,7 @@ pub fn add_hooks(
                             Local(Tee, value_tmp),
                             location.0,
                             location.1,
+                            Const(Val::I32(0)),
                             Const(Val::I32(memarg.offset as i32)),
                             Const(Val::I32(memarg.alignment_exp as i32)),
                         ]);
@@ -986,6 +990,7 @@ pub fn add_hooks(
                             instr.clone(),
                             location.0,
                             location.1,
+                            Const(Val::I32(0)),
                             Const(Val::I32(memarg.offset as i32)),
                             Const(Val::I32(memarg.alignment_exp as i32)),
                         ]);

@@ -154,28 +154,37 @@ impl HookMap {
             // NOTE js_args is very hacky! We rely on the Hook constructor to close the parenthesis and insert the call statement to endBrTableBlock() here
             BrTable { .. } => Hook::new(&ll_name, args!(tableIdx: I32, brTablesInfoIdx: I32), &ll_name, "Wasabi.module.info.brTables[brTablesInfoIdx].table, Wasabi.module.info.brTables[brTablesInfoIdx].default, tableIdx); Wasabi.endBrTableBlocks(brTablesInfoIdx, tableIdx, func"),
 
-            MemorySize(_) => Hook::new(&ll_name, args!(currentSizePages: I32), &ll_name, "currentSizePages"),
-            MemoryGrow(_) => Hook::new(&ll_name, args!(deltaPages: I32, previousSizePages: I32), &ll_name, "deltaPages, previousSizePages"),
-            MemoryFill =>  Hook::new(&ll_name, args!(index: I32, value: I32, length: I32), &ll_name, "index, value, length"),
-            MemoryCopy =>  Hook::new(&ll_name, args!(destination: I32, source: I32, length: I32), &ll_name, "destination, source, length"),
+            MemorySize(_) => Hook::new(&ll_name, args!(memIdx: I32, currentSizePages: I32), &ll_name, "memIdx, currentSizePages"),
+            MemoryGrow(_) => Hook::new(&ll_name, args!(memIdx: I32, deltaPages: I32, previousSizePages: I32), &ll_name, "memIdx, deltaPages, previousSizePages"),
+            MemoryFill =>  {
+                // TODO: value can be something else then I32 I guess
+                let args = args!(memidx: I32, addr: I32, value: I32, length: I32);
+                let js_args = &format!("{{memidx, addr}}, {}, length", &args[3].to_lowlevel_long_expr());
+                Hook::new(&ll_name, args!(index: I32, value: I32, length: I32), &ll_name, js_args)
+            },
+            MemoryCopy =>  {
+                args!(memIdxDest: I32, addrDest: I32, memIdxSource: I32, addrDestSource: I32, length: I32);
+                let js_args = "{{memIdxDext, addrDest}}, {{memIdxSource, addrSource}}, length";
+                Hook::new(&ll_name, args!(destination: I32, source: I32, length: I32), &ll_name, js_args)
+            },
             MemoryInit(_) =>  Hook::new(&ll_name, args!(destination: I32, source: I32, length: I32), &ll_name, "destination, source, length"),
 
-            TableSize(_) => Hook::new(&ll_name, args!(tableIndex: I32, currentSizeEntries: I32), &ll_name, "tableIndex, currentSizeEntries"),
-            TableCopy(_, _) =>  Hook::new(&ll_name, args!(tableIndex1:I32, tableIndex2: I32, destination: I32, source: I32, length: I32), &ll_name, "tableIndex1, tableIndex2, destination, source, length"),
-            TableInit(_, _) =>  Hook::new(&ll_name, args!(tableIndex: I32, elemIndex: I32, destination: I32, source: I32, length: I32), &ll_name, "tableIndex, elemIndex, destination, source, length"),
+            TableSize(_) => Hook::new(&ll_name, args!(tableIdx: I32, currentSizeEntries: I32), &ll_name, "tableIndex, currentSizeEntries"),
+            TableCopy(_, _) =>  Hook::new(&ll_name, args!(tableIdxDest:I32, elemIdxDest: I32, tableIdxSource: I32, elemIdxSource: I32, length: I32), &ll_name, "{tableIdxDest, elemIdxDest}, {tableIdxSource, elemIdxSource}, length"),
+            TableInit(_, _) =>  Hook::new(&ll_name, args!(tableIdx: I32, elemIdx: I32, destination: I32, source: I32, length: I32), &ll_name, "tableIdx, elemIdx, destination, source, length"),
              
             Load(op, _) => {
                 let ty = op.to_type().results()[0];
-                let args = args!(offset: I32, align: I32, addr: I32, value: ty);
+                let args = args!(memIdx: I32, addr: I32, offset: I32, align: I32, value: ty);
                 let instr_name = instr.to_name();
-                let js_args = &format!("\"{}\", {{addr, offset, align}}, {}", instr_name, &args[3].to_lowlevel_long_expr());
+                let js_args = &format!("\"{}\", {{memIdx, addr, offset, align}}, {}", instr_name, &args[4].to_lowlevel_long_expr());
                 Hook::new(ll_name, args, "load", js_args)
             }
             Store(op, _) => {
                 let ty = op.to_type().inputs()[1];
-                let args = args!(offset: I32, align: I32, addr: I32, value: ty);
+                let args = args!(memIdx: I32, addr: I32, offset: I32, align: I32, value: ty);
                 let instr_name = instr.to_name();
-                let js_args = &format!("\"{}\", {{addr, offset, align}}, {}", instr_name, &args[3].to_lowlevel_long_expr());
+                let js_args = &format!("\"{}\", {{memIdx, addr}}, {{offset, align}}, {}", instr_name, &args[4].to_lowlevel_long_expr());
                 Hook::new(ll_name, args, "store", js_args)
             }
 
@@ -243,26 +252,26 @@ impl HookMap {
             }
             TableGet(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.get has only one argument");
-                let args = args!(tableIndex: I32, elemindex: I32, value: polymorphic_tys[0]);
-                let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
+                let args = args!(tableIdx: I32, elemIdx: I32, value: polymorphic_tys[0]);
+                let js_args = &format!("{{tableIdx, elemIdx}}, {}", &args[3].to_lowlevel_long_expr());
                 Hook::new(ll_name, args, "table_get", js_args)
             }
             TableSet(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.set has only one argument");
-                let args = args!(tableIndex: I32, elemindex: I32, value: polymorphic_tys[0]);
-                let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
+                let args = args!(tableIdx: I32, elemIdx: I32, value: polymorphic_tys[0]);
+                let js_args = &format!("{{tableIdx, elemIdx}}, {}", &args[3].to_lowlevel_long_expr());
                 Hook::new(ll_name, args, "table_set", js_args)
             } 
             TableGrow(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.grow has only one argument");
-                let args = args!(tableIndex:I32, n: polymorphic_tys[0], val: I32, previousElements: I32);
+                let args = args!(tableIdx:I32, n: polymorphic_tys[0], val: I32, previousElements: I32);
                 let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
                 Hook::new(ll_name, args, "table_grow", js_args)
             }
             TableFill(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.fill has only one argument");
-                let args = args!(tableIndex: I32, i: I32, value: polymorphic_tys[0], length: I32);
-                let js_args = &args.iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", ");
+                let args = args!(tableIdx: I32, elemIdx: I32, value: polymorphic_tys[0], length: I32);
+                let js_args = &format!("{{tableIdx, elemIdx}}, {}, length", &args[3].to_lowlevel_long_expr());
                 Hook::new(ll_name, args, "table_fill", js_args)
             }
             Global(_, _) => {
@@ -286,10 +295,10 @@ impl HookMap {
                 Hook::new(ll_name, args, "call_pre", js_args)
             }
             CallIndirect(_, _) => {
-                let mut args = args!(tableIndex: I32, elemIndex: I32);
+                let mut args = args!(tableIdx: I32, elemIdx: I32);
                 args.extend(polymorphic_tys.iter().enumerate().map(|(i, &ty)| Arg { name: format!("arg{i}"), ty }));
                 let instr_name = instr.to_name();
-                let js_args = &format!("\"{}\", Wasabi.resolveTableIdx(tableIndex, elemIndex), [{}], tableIndex, elemIndex", instr_name, args[2..].iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", "));
+                let js_args = &format!("\"{}\", Wasabi.resolveTableIdx(tableIdx, elemIdx), [{}], {{tableIdx, elemIdx}}", instr_name, args[2..].iter().map(Arg::to_lowlevel_long_expr).collect::<Vec<_>>().join(", "));
                 Hook::new(ll_name, args, "call_pre", js_args)
             }
 
