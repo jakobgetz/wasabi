@@ -265,8 +265,7 @@ pub fn add_hooks(
                 }
                 If(block_ty) => {
                     block_stack.begin_if(iidx);
-                    type_stack.instr(&FunctionType::new(&[I32], &[]));
-                    type_stack.begin(block_ty);
+                    type_stack.begin_if(block_ty);
 
                     // if_ hook for the condition (always executed on either branch)
                     if enabled_hooks.contains(Hook::If) {
