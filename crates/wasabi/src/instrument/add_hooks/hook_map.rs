@@ -175,14 +175,14 @@ impl HookMap {
              
             Load(op, _) => {
                 let ty = op.to_type().results()[0];
-                let args = args!(memIdx: I32, addr: I32, offset: I32, align: I32, value: ty);
+                let args = args!(memIdx: I32, offset: I32, align: I32, addr: I32, value: ty);
                 let instr_name = instr.to_name();
-                let js_args = &format!("\"{}\", {{memIdx, addr, offset, align}}, {}", instr_name, &args[4].to_lowlevel_long_expr());
+                let js_args = &format!("\"{}\", {{memIdx, addr}}, {{offset, align}}, {}", instr_name, &args[4].to_lowlevel_long_expr());
                 Hook::new(ll_name, args, "load", js_args)
             }
             Store(op, _) => {
                 let ty = op.to_type().inputs()[1];
-                let args = args!(memIdx: I32, addr: I32, offset: I32, align: I32, value: ty);
+                let args = args!(memIdx: I32, offset: I32, align: I32, addr: I32, value: ty);
                 let instr_name = instr.to_name();
                 let js_args = &format!("\"{}\", {{memIdx, addr}}, {{offset, align}}, {}", instr_name, &args[4].to_lowlevel_long_expr());
                 Hook::new(ll_name, args, "store", js_args)
@@ -253,13 +253,13 @@ impl HookMap {
             TableGet(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.get has only one argument");
                 let args = args!(tableIdx: I32, elemIdx: I32, value: polymorphic_tys[0]);
-                let js_args = &format!("{{tableIdx, elemIdx}}, {}", &args[3].to_lowlevel_long_expr());
+                let js_args = &format!("{{tableIdx, elemIdx}}, {}", &args[2].to_lowlevel_long_expr());
                 Hook::new(ll_name, args, "table_get", js_args)
             }
             TableSet(_) => {
                 assert_eq!(polymorphic_tys.len(), 1, "table.set has only one argument");
                 let args = args!(tableIdx: I32, elemIdx: I32, value: polymorphic_tys[0]);
-                let js_args = &format!("{{tableIdx, elemIdx}}, {}", &args[3].to_lowlevel_long_expr());
+                let js_args = &format!("{{tableIdx, elemIdx}}, {}", &args[2].to_lowlevel_long_expr());
                 Hook::new(ll_name, args, "table_set", js_args)
             } 
             TableGrow(_) => {
