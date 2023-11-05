@@ -1,0 +1,25 @@
+<html>
+  <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+  </head>
+  <body>
+    <script type="module">
+      import init, { instrument_wasm } from './pkg/wasabi_js.js';
+      async function run() {
+        await init();
+        let buf = await fetch('./add.wasm')
+          .then(res => res.arrayBuffer())
+        const original_arr = new Uint8Array(buf);
+        console.log(`original wasm:`, original_arr)
+        const { instrumented, js } = instrument_wasm({original: original_arr});
+        const instrumented_arr = new Uint8Array(instrumented);
+        console.log(`instrumented wasm:`, instrumented_arr)
+        const res = eval(js);
+        const { instance } = await WebAssembly.instantiate(instrumented_arr, res);
+        console.log(`1 + 2 = `, instance.exports.add(1, 2))
+      }
+      run();
+    </script>
+    <h1>Open Console</h1>
+  </body>
+</html>

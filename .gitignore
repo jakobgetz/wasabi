@@ -10,6 +10,10 @@
 # Rust build artifacts.
 target/
 
+# JS build artifacts.
+node_modules/
+pkg/
+
 # Wasabi outputs, test outputs.
 out/
 /test-outputs/
