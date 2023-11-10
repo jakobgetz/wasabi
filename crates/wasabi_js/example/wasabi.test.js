@@ -37,3 +37,17 @@ test("global.wasm", async () => {
     const { instance } = await WebAssembly.instantiate(buff, res);
     expect(instance.exports.export_global()).toBe(10n)
 });
+
+// Binary from https://github.com/RustPython/demo/blob/9e3e5111f3b46b1806c275c9233e29d4e8f944dc/19e19cab0532dd6e9ea8.module.wasm
+// Errors with: Fatal JavaScript invalid size error 188720663
+// test("RustPython.wasm", async () => {
+//     const buf = fs.readFileSync('./example/RustPython.wasm');
+//     const arr = new Uint8Array(buf);
+//     const { instrumented, js } = wasabi.instrument_wasm({ original: arr });
+//     const res = eval(js);
+//     res.console = console
+//     res.env = {from_js: new WebAssembly.Global({value: "i64", mutable: false}, 0n)}
+//     const buff = new Uint8Array(instrumented);
+//     const { instance } = await WebAssembly.instantiate(buff, res);
+//     expect(instance.exports.export_global()).toBe(10n)
+// });
