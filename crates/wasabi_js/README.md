@@ -33,3 +33,9 @@ To run the demo:
 ```bash
 npm run demo
 ```
+
+To instrument wasm code:
+
+```bash
+npm run instrument -- {OPTIONS} <input.wasm>
+```
