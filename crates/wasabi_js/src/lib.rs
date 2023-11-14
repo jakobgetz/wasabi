@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use wasabi::{instrument::add_hooks, options::HookSet};
+use wasabi::{instrument::add_hooks, options::{HookSet, Hook}};
 use wasabi_wasm::Module;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
@@ -19,7 +19,10 @@ pub fn instrument_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     console_error_panic_hook::set_once();
     let Input { original } = serde_wasm_bindgen::from_value(val)?;
     // TODO: make hookset configurable
-    let _enabled_hooks = HookSet::all();
+    let mut _enabled_hooks = HookSet::new();
+    for hook in [Hook::Begin, Hook::Call, Hook::Global, Hook::Load, Hook::Store, Hook::MemoryGrow, Hook::TableSet, Hook::TableGet] {
+        _enabled_hooks.insert(hook);
+    }
     // TODO: make optnodejs configurable
     let opt_nodejs = false;
 
