@@ -11,7 +11,7 @@
           .then(res => res.arrayBuffer())
         const original_arr = new Uint8Array(buf);
         console.log(`original wasm:`, original_arr)
-        const { instrumented, js } = instrument_wasm({original: original_arr});
+        const { instrumented, js } = instrument_wasm(original_arr);
         const instrumented_arr = new Uint8Array(instrumented);
         console.log(`instrumented wasm:`, instrumented_arr)
         const res = eval(js);
@@ -23,7 +23,7 @@
           .then(res => res.arrayBuffer())
         const original_arr = new Uint8Array(buf);
         console.log(`original wasm:`, original_arr)
-        const { instrumented, js } = instrument_wasm({original: original_arr});
+        const { instrumented, js } = instrument_wasm(original_arr);
         const instrumented_arr = new Uint8Array(instrumented);
         console.log(`instrumented wasm:`, instrumented_arr)
         const res = eval(js);
