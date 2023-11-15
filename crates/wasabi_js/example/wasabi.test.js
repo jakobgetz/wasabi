@@ -30,7 +30,7 @@ test("global.wasm", async () => {
 function setup(path) {
     const buf = fs.readFileSync(path);
     const arr = new Uint8Array(buf);
-    const { instrumented, js } = wasabi.instrument_wasm({ original: arr });
+    const { instrumented, js } = wasabi.instrument_wasm(arr);
     const res = eval(js);
     const buff = new Uint8Array(instrumented);
     return { buff, res };

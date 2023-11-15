@@ -15,7 +15,7 @@ const OUTPUT_DIR = args['-o'] || process.cwd() + '/out';
 // Instrument wasm
 const buf = fs.readFileSync(INPUT_PATH);
 const arr = new Uint8Array(buf);
-const { instrumented, js } = wasabi.instrument_wasm({ original: arr });
+const { instrumented, js } = wasabi.instrument_wasm(arr);
 
 // Write output
 if (!fs.existsSync(OUTPUT_DIR)) {
