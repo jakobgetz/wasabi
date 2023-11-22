@@ -274,7 +274,7 @@ pub fn add_hooks(
 
                     // if_ hook for the condition (always executed on either branch)
                     if enabled_hooks.contains(Hook::If) {
-                        let condition_tmp = function.add_fresh_local(I32);
+                        let condition_tmp = function.add_fresh_locals(&[I32])[0];
 
                         instrumented_body.extend_from_slice(&[
                             Local(Tee, condition_tmp),
@@ -399,7 +399,7 @@ pub fn add_hooks(
                         || enabled_hooks.contains(Hook::End) {
 
                         // saved condition local is needed by _both_ hooks
-                        let condition_tmp = function.add_fresh_local(I32);
+                        let condition_tmp = function.add_fresh_locals(&[I32])[0];
                         instrumented_body.push(Local(Tee, condition_tmp));
 
                         // br_if hook
@@ -448,7 +448,7 @@ pub fn add_hooks(
                         // NOTE calling the end() hooks for the intermediate blocks is done at runtime
                         // by the br_table low-level hook
 
-                        let target_idx_tmp = function.add_fresh_local(I32);
+                        let target_idx_tmp = function.add_fresh_locals(&[I32])[0];
 
                         instrumented_body.extend_from_slice(&[
                             Local(Tee, target_idx_tmp),
@@ -539,8 +539,9 @@ pub fn add_hooks(
                     if enabled_hooks.contains(Hook::Call) {
                         /* pre call hook */
 
-                        let target_table_idx_tmp = function.add_fresh_local(I32);
-                        let arg_tmps = function.add_fresh_locals(func_ty.inputs());
+                        let tmp_locals = function.add_fresh_locals(&[&[ValType::I32], func_ty.inputs()].concat());
+                        let target_table_idx_tmp = tmp_locals[0];
+                        let arg_tmps = &tmp_locals[1..];
 
                         instrumented_body.push(Local(Set, target_table_idx_tmp));
                         save_stack_to_locals(&mut instrumented_body, &arg_tmps);
@@ -550,7 +551,7 @@ pub fn add_hooks(
                             location.1.clone(),
                             Local(Get, target_table_idx_tmp),
                         ]);
-                        restore_locals_with_i64_handling(&mut instrumented_body, arg_tmps);
+                        restore_locals_with_i64_handling(&mut instrumented_body, arg_tmps.iter().copied());
                         instrumented_body.extend_from_slice(&[
                             hooks.instr(&instr, func_ty.inputs()),
                             instr.clone(),
@@ -579,7 +580,7 @@ pub fn add_hooks(
                     let ty = type_stack.pop_val();
 
                     if enabled_hooks.contains(Hook::Drop) {
-                        let tmp = function.add_fresh_local(ty);
+                        let tmp = function.add_fresh_locals(&[ty])[0];
 
                         instrumented_body.extend_from_slice(&[
                             Local(Set, tmp),
@@ -704,8 +705,9 @@ pub fn add_hooks(
                     type_stack.instr(&instr.simple_type().unwrap());
 
                     if enabled_hooks.contains(Hook::MemoryGrow) {
-                        let input_tmp = function.add_fresh_local(I32);
-                        let result_tmp = function.add_fresh_local(I32);
+                        let tmp_locals = function.add_fresh_locals(&[I32, I32]);
+                        let input_tmp = tmp_locals[0];
+                        let result_tmp = tmp_locals[1];
 
                         instrumented_body.extend_from_slice(&[
                             Local(Tee, input_tmp),
@@ -836,8 +838,9 @@ pub fn add_hooks(
                     type_stack.instr(&ty);
 
                     if enabled_hooks.contains(Hook::Load) {
-                        let addr_tmp = function.add_fresh_local(ty.inputs()[0]);
-                        let value_tmp = function.add_fresh_local(ty.results()[0]);
+                        let tmp_locals = function.add_fresh_locals(&[ty.inputs(), ty.results()].concat());
+                        let addr_tmp = tmp_locals[0..ty.inputs().len()][0];
+                        let value_tmp = tmp_locals[ty.inputs().len()..][0];
 
                         instrumented_body.extend_from_slice(&[
                             Local(Tee, addr_tmp),
@@ -859,8 +862,9 @@ pub fn add_hooks(
                     type_stack.instr(&ty);
 
                     if enabled_hooks.contains(Hook::Store) {
-                        let addr_tmp = function.add_fresh_local(ty.inputs()[0]);
-                        let value_tmp = function.add_fresh_local(ty.inputs()[1]);
+                        let tmp_locals  = function.add_fresh_locals(ty.inputs());
+                        let addr_tmp = tmp_locals[0];
+                        let value_tmp = tmp_locals[1];
 
                         save_stack_to_locals(&mut instrumented_body, &[addr_tmp, value_tmp]);
                         instrumented_body.extend_from_slice(&[
@@ -901,8 +905,9 @@ pub fn add_hooks(
 
                     if (enabled_hooks.contains(Hook::Unary) && ty.inputs().len() == 1)
                         || (enabled_hooks.contains(Hook::Binary) && ty.inputs().len() == 2) {
-                        let input_tmps = function.add_fresh_locals(ty.inputs());
-                        let result_tmps = function.add_fresh_locals(ty.results());
+                        let tmp_locals = function.add_fresh_locals(&[ty.inputs(), ty.results()].concat());
+                        let input_tmps = &tmp_locals[0..ty.inputs().len()];
+                        let result_tmps = &tmp_locals[ty.inputs().len()..];
 
                         save_stack_to_locals(&mut instrumented_body, &input_tmps);
                         instrumented_body.push(instr.clone());

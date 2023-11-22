@@ -10,6 +10,7 @@
 //!    functions, and locals).
 
 use core::fmt;
+use std::collections::HashMap;
 use std::hash;
 use std::marker::PhantomData;
 use std::path::Path;
@@ -326,7 +327,7 @@ impl Serialize for Label {
 /* Overall module structure, sections. */
 
 /// A top-level WebAssembly module.
-#[derive(Debug, Clone, Default, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct Module {
     // From the name section, if present, e.g., compiler-generated debug info.
     pub name: Option<String>,
@@ -423,7 +424,7 @@ pub enum ImportOrPresent<T> {
     Present(T),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Function {
     // Type is inlined here compared to low-level/binary/spec representation.
     pub type_: FunctionType,
@@ -439,6 +440,7 @@ pub struct Function {
     // invariant.
     // However, so far it was never necessary to change the type signature of an existing function.
     param_names: Vec<Option<String>>,
+    temp_local_map: HashMap<ValType, Vec<(bool, Idx<Local>)>>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -1983,6 +1985,7 @@ impl Function {
             export,
             name: None,
             param_names: Vec::new(),
+            temp_local_map: HashMap::new(),
         }
     }
 
@@ -1998,6 +2001,7 @@ impl Function {
             export,
             name: None,
             param_names: Vec::new(),
+            temp_local_map: HashMap::new(),
         }
     }
 
@@ -2058,17 +2062,33 @@ impl Function {
     /// add a new local with type ty and return its index
     pub fn add_fresh_local(&mut self, ty: ValType) -> Idx<Local> {
         let param_count = self.param_count();
+        let local_count = self.local_count();
+        let temp_locals = self.temp_local_map.entry(ty).or_insert_with(|| Vec::new());
+        for (used, idx) in temp_locals.iter_mut() {
+            if !*used {
+                *used = true;
+                return *idx;
+            }
+        }
+        let new_idx: Idx<Local> = (param_count + local_count).into();
+        temp_locals.push((true, new_idx));
         let locals = &mut self
             .code_mut()
             .expect("cannot add local to imported function")
             .locals;
-        let new_idx = param_count + locals.len();
         locals.push(Local::new(ty));
-        new_idx.into()
+        new_idx
     }
 
     pub fn add_fresh_locals(&mut self, tys: &[ValType]) -> SmallVec<[Idx<Local>; 8]> {
-        tys.iter().map(|ty| self.add_fresh_local(*ty)).collect()
+        let res = tys.iter().map(|ty| self.add_fresh_local(*ty)).collect();
+        // FIXME: this is a hack that should be handled by restore_locals
+        for (_k, v) in self.temp_local_map.iter_mut() {
+            for idx in 0..v.len() {
+                v[idx] = (false, v[idx].1);
+            }
+        }
+        res
     }
 
     // Functions for the number of parameters and non-parameter locals.
