@@ -1,5 +1,3 @@
-use std::ptr::metadata;
-
 use serde::Serialize;
 use serde::Serializer;
 use wasabi_wasm::Function;
