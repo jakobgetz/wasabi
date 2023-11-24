@@ -20,7 +20,7 @@ pub fn instrument_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let Input { original } = serde_wasm_bindgen::from_value(val)?;
     // TODO: make hookset configurable
     let mut _enabled_hooks = HookSet::new();
-    for hook in [Hook::Begin, Hook::Call, Hook::Global, Hook::Load, Hook::Store, Hook::MemoryGrow, Hook::TableSet, Hook::TableGet] {
+    for hook in [Hook::Begin, Hook::Call, Hook::Global, Hook::Load, Hook::Store, Hook::MemoryGrow, Hook::TableSet, Hook::TableGet, Hook::End] {
         _enabled_hooks.insert(hook);
     }
     // TODO: make optnodejs configurable
