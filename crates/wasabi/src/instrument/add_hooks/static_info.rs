@@ -78,7 +78,7 @@ pub struct MemoryInfo {
     pub import: Option<(String, String)>,
     pub export: Vec<String>,
     pub initial: u32,
-    pub maxiumum: Option<u32>,
+    pub maximum: Option<u32>,
 }
 
 impl<'a> From<&'a Memory> for MemoryInfo {
@@ -87,7 +87,7 @@ impl<'a> From<&'a Memory> for MemoryInfo {
             import: memory.import.clone(),
             export: memory.export.clone(),
             initial: memory.limits.initial_size,
-            maxiumum: memory.limits.max_size,
+            maximum: memory.limits.max_size,
         }
     }
 }
@@ -99,7 +99,7 @@ pub struct TableInfo {
     pub export: Vec<String>,
     pub ref_type: RefType,
     pub initial: u32,
-    pub maxiumum: Option<u32>,
+    pub maximum: Option<u32>,
 }
 
 impl<'a> From<&'a Table> for TableInfo {
@@ -109,7 +109,7 @@ impl<'a> From<&'a Table> for TableInfo {
             export: table.export.clone(),
             ref_type: table.ref_type,
             initial: table.limits.initial_size,
-            maxiumum: table.limits.max_size,
+            maximum: table.limits.max_size,
         }
     }
 }
@@ -132,7 +132,7 @@ impl<'a> From<&'a Global> for GlobalInfo {
                 .map(|(module, name)| (String::from(module), String::from(name))),
             export: global.export.clone(),
             val_type: global.type_.0,
-            mutability: global.type_.1
+            mutability: global.type_.1,
         }
     }
 }
