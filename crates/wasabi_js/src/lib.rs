@@ -15,7 +15,7 @@ pub fn instrument_wasm(val: &[u8]) -> Result<JsValue, JsValue> {
     console_error_panic_hook::set_once();
     // TODO: make hookset configurable
     let mut _enabled_hooks = HookSet::new();
-    for hook in [Hook::BeginFunction, Hook::Call, Hook::Global, Hook::Load, Hook::Store, Hook::MemoryGrow, Hook::TableSet, Hook::TableGet, Hook::End] {
+    for hook in [Hook::BeginFunction, Hook::Call, Hook::Global, Hook::Load, Hook::Store, Hook::MemoryGrow, Hook::TableSet, Hook::TableGet, Hook::Return] {
         _enabled_hooks.insert(hook);
     }
     // TODO: make optnodejs configurable
