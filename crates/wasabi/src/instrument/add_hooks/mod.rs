@@ -117,7 +117,7 @@ pub fn add_hooks(
         }
 
         // function_begin hook
-        if enabled_hooks.contains(Hook::Begin) {
+        if enabled_hooks.contains(Hook::BeginFunction) {
             let func = &module_info.read().functions[fidx.to_usize()];
             let input_ty = func.type_.inputs();
             
@@ -241,7 +241,7 @@ pub fn add_hooks(
 
                     instrumented_body.push(instr);
 
-                    if enabled_hooks.contains(Hook::Begin) {
+                    if enabled_hooks.contains(Hook::BeginBlock) {
                         instrumented_body.extend_from_slice(&[
                             location.0,
                             location.1,
@@ -255,7 +255,7 @@ pub fn add_hooks(
 
                     instrumented_body.push(instr);
 
-                    if enabled_hooks.contains(Hook::Begin) {
+                    if enabled_hooks.contains(Hook::BeginLoop) {
                         instrumented_body.extend_from_slice(&[
                             location.0,
                             location.1,
@@ -284,7 +284,7 @@ pub fn add_hooks(
                     instrumented_body.push(instr);
 
                     // begin hook (not executed when condition implies else branch)
-                    if enabled_hooks.contains(Hook::Begin) {
+                    if enabled_hooks.contains(Hook::BeginIf) {
                         instrumented_body.extend_from_slice(&[
                             location.0,
                             location.1,
@@ -313,7 +313,7 @@ pub fn add_hooks(
 
                     instrumented_body.push(instr);
 
-                    if enabled_hooks.contains(Hook::Begin) {
+                    if enabled_hooks.contains(Hook::BeginEnd) {
                         instrumented_body.extend_from_slice(&[
                             location.0,
                             location.1,

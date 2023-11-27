@@ -80,7 +80,11 @@ pub enum Hook {
     BrTable,
 
     If,
-    Begin,
+    BeginFunction,
+    BeginBlock,
+    BeginIf,
+    BeginLoop,
+    BeginEnd,
     End,
 
     // together for call_pre and call_post
