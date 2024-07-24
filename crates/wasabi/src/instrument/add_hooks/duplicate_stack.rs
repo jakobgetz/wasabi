@@ -37,10 +37,6 @@ pub fn restore_locals_with_i64_handling(
     function: &Function,
 ) {
     for local in locals {
-        super::convert_i64::convert_i64_instr(
-            append_to,
-            Instr::Local(Get, local),
-            function.param_or_local_type(local),
-        );
+        append_to.push(Instr::Local(Get, local));
     }
 }
