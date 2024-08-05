@@ -2,11 +2,15 @@ use serde::Serialize;
 use serde::Serializer;
 use wasabi_wasm::Function;
 use wasabi_wasm::FunctionType;
+use wasabi_wasm::Global;
 use wasabi_wasm::Idx;
 use wasabi_wasm::Instr;
 use wasabi_wasm::Label;
+use wasabi_wasm::Memory;
 use wasabi_wasm::Module;
+use wasabi_wasm::Mutability;
 use wasabi_wasm::RefType;
+use wasabi_wasm::Table;
 use wasabi_wasm::ValType;
 
 use super::block_stack::BlockStack;
@@ -21,11 +25,10 @@ use super::block_stack::BlockStackElement;
 #[serde(rename_all = "camelCase")]
 pub struct ModuleInfo {
     pub functions: Vec<FunctionInfo>,
-    #[serde(serialize_with = "serialize_types")]
-    pub globals: Vec<ValType>,
+    pub tables: Vec<TableInfo>,
+    pub memories: Vec<MemoryInfo>,
+    pub globals: Vec<GlobalInfo>,
     pub start: Option<Idx<Function>>,
-    pub tables: Vec<RefType>,
-    pub table_export_name: Option<String>,
     pub br_tables: Vec<BrTableInfo>,
     // For mapping indices of indirectly called functions to the original indices, see
     // `resolveTableIdx` in `runtime.js`.
@@ -36,20 +39,81 @@ impl<'a> From<&'a Module> for ModuleInfo {
     fn from(module: &Module) -> Self {
         ModuleInfo {
             functions: module.functions.iter().map(Into::into).collect(),
-            globals: module.globals.iter().map(|g| g.type_.0).collect(),
             start: module.start,
-            tables: module.tables.iter().map(|t| t.ref_type).collect(),
-            // if the module has no table, there cannot be a call_indirect, so this null will never be read from JS runtime
-            table_export_name: module
-                .tables
-                .get(0)
-                .and_then(|table| table.export.get(0).cloned()),
+            tables: module.tables.iter().map(Into::into).collect(),
+            memories: module.memories.iter().map(Into::into).collect(),
+            globals: module.globals.iter().map(Into::into).collect(),
             br_tables: vec![],
             original_function_imports_count: module
                 .functions
                 .iter()
                 .filter_map(Function::import)
                 .count(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryInfo {
+    pub import: Option<(String, String)>,
+    pub export: Vec<String>,
+    pub initial: u32,
+    pub maximum: Option<u32>,
+}
+
+impl<'a> From<&'a Memory> for MemoryInfo {
+    fn from(memory: &Memory) -> MemoryInfo {
+        MemoryInfo {
+            import: memory.import.clone(),
+            export: memory.export.clone(),
+            initial: memory.limits.initial_size,
+            maximum: memory.limits.max_size,
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TableInfo {
+    pub import: Option<(String, String)>,
+    pub export: Vec<String>,
+    pub ref_type: RefType,
+    pub initial: u32,
+    pub maximum: Option<u32>,
+}
+
+impl<'a> From<&'a Table> for TableInfo {
+    fn from(table: &Table) -> TableInfo {
+        TableInfo {
+            import: table.import.clone(),
+            export: table.export.clone(),
+            ref_type: table.ref_type,
+            initial: table.limits.initial_size,
+            maximum: table.limits.max_size,
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalInfo {
+    pub import: Option<(String, String)>,
+    pub export: Vec<String>,
+    pub val_type: ValType,
+    pub mutability: Mutability,
+}
+
+impl<'a> From<&'a Global> for GlobalInfo {
+    fn from(global: &Global) -> GlobalInfo {
+        GlobalInfo {
+            import: global
+                .import()
+                .clone()
+                .map(|(module, name)| (String::from(module), String::from(name))),
+            export: global.export.clone(),
+            val_type: global.type_.0,
+            mutability: global.type_.1,
         }
     }
 }

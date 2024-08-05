@@ -43,10 +43,24 @@ pub fn add_hooks(
     enabled_hooks: HookSet,
     node_js: bool,
 ) -> Option<(String, usize)> {
-    // make sure table is exported, needed for Wasabi runtime to resolve table indices to function indices.
+    for (i, function) in module.functions.iter_mut().enumerate() {
+        if function.export.is_empty() {
+            function.export.push(format!("__wasabi_function{i}"));
+        }
+    }
     for (i, table) in module.tables.iter_mut().enumerate() {
         if table.export.is_empty() {
             table.export.push(format!("__wasabi_table{i}"));
+        }
+    }
+    for (i, memory) in module.memories.iter_mut().enumerate() {
+        if memory.export.is_empty() {
+            memory.export.push(format!("__wasabi_memory{i}"));
+        }
+    }
+    for (i, global) in module.globals.iter_mut().enumerate() {
+        if global.export.is_empty() {
+            global.export.push(format!("__wasabi_global{i}"));
         }
     }
     // FIXME is this a valid workaround for wrong Firefox exported function .name property?
@@ -108,12 +122,17 @@ pub fn add_hooks(
         }
 
         // function_begin hook
-        if enabled_hooks.contains(Hook::Begin) {
+        if enabled_hooks.contains(Hook::BeginFunction) {
+            let func = &module_info.read().functions[fidx.to_usize()];
+            let input_ty = func.type_.inputs();
+            
             instrumented_body.extend_from_slice(&[
                 fidx.to_const(),
-                // function begin does not correspond to any instruction, so take -1 as instruction index
                 Const(Val::I32(-1)),
-                hooks.begin_function()
+            ]);
+            input_ty.iter().enumerate().for_each(|(i, _ty)| instrumented_body.push(Local(Get, i.into())));
+            instrumented_body.extend_from_slice(&[
+                hooks.begin_function(input_ty)
             ]);
         }
 
@@ -227,7 +246,7 @@ pub fn add_hooks(
 
                     instrumented_body.push(instr);
 
-                    if enabled_hooks.contains(Hook::Begin) {
+                    if enabled_hooks.contains(Hook::BeginBlock) {
                         instrumented_body.extend_from_slice(&[
                             location.0,
                             location.1,
@@ -241,7 +260,7 @@ pub fn add_hooks(
 
                     instrumented_body.push(instr);
 
-                    if enabled_hooks.contains(Hook::Begin) {
+                    if enabled_hooks.contains(Hook::BeginLoop) {
                         instrumented_body.extend_from_slice(&[
                             location.0,
                             location.1,
@@ -270,7 +289,7 @@ pub fn add_hooks(
                     instrumented_body.push(instr);
 
                     // begin hook (not executed when condition implies else branch)
-                    if enabled_hooks.contains(Hook::Begin) {
+                    if enabled_hooks.contains(Hook::BeginIf) {
                         instrumented_body.extend_from_slice(&[
                             location.0,
                             location.1,
@@ -299,7 +318,7 @@ pub fn add_hooks(
 
                     instrumented_body.push(instr);
 
-                    if enabled_hooks.contains(Hook::Begin) {
+                    if enabled_hooks.contains(Hook::BeginEnd) {
                         instrumented_body.extend_from_slice(&[
                             location.0,
                             location.1,
@@ -645,7 +664,7 @@ pub fn add_hooks(
                     }
                 }
                 Global(op, global_idx) => {
-                    let global_ty = module_info.read().globals[global_idx.to_usize()];
+                    let global_ty = module_info.read().globals[global_idx.to_usize()].val_type;
 
                     type_stack.instr(&op.to_type(global_ty));
 
@@ -737,7 +756,7 @@ pub fn add_hooks(
                 /* Table Instructions */
 
                 TableGet(table_idx) => {
-                    let t = module_info.read().tables[table_idx.to_usize()];
+                    let t = module_info.read().tables[table_idx.to_usize()].ref_type;
                     let ty = FunctionType::new(&[I32], &[ValType::Ref(t)]);
                     type_stack.instr(&ty);
                     if enabled_hooks.contains(Hook::TableGet) {
@@ -748,7 +767,7 @@ pub fn add_hooks(
                     }
                 },
                 TableSet(table_idx) => {
-                    let t = module_info.read().tables[table_idx.to_usize()];
+                    let t = module_info.read().tables[table_idx.to_usize()].ref_type;
                     let ty = FunctionType::new(&[I32, ValType::Ref(t)], &[]);
                     type_stack.instr(&ty);
                     if enabled_hooks.contains(Hook::TableSet) {
@@ -769,7 +788,7 @@ pub fn add_hooks(
                     }
                 }
                 TableGrow(table_idx) => {
-                    let t = module_info.read().tables[table_idx.to_usize()];
+                    let t = module_info.read().tables[table_idx.to_usize()].ref_type;
                     let ty = FunctionType::new(&[ValType::Ref(t), I32], &[I32]);
                     type_stack.instr(&ty);
                     if enabled_hooks.contains(Hook::TableGrow) {
@@ -780,7 +799,7 @@ pub fn add_hooks(
                     }
                 },
                 TableFill(table_idx) => {
-                    let t = module_info.read().tables[table_idx.to_usize()];
+                    let t = module_info.read().tables[table_idx.to_usize()].ref_type;
                     let ty = FunctionType::new(&[I32, ValType::Ref(t), I32], &[]);
                     type_stack.instr(&ty);
                     if enabled_hooks.contains(Hook::TableFill) {

@@ -191,7 +191,7 @@ impl fmt::Display for GlobalType {
 }
 
 /// Mutability of global (scalar) variables.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Serialize, Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum Mutability {
     Const,
     Mut,

@@ -1,9 +1,10 @@
 {
     "scripts": {
-        "build": "wasm-pack build --debug -t web",
+        "build": "wasm-pack build --debug -t web && npm run merge",
         "demo": "npm run build && npx copyfiles ./pkg/* ./example/ && npx http-server ./example -p 8888",
         "test": "wasm-pack build --debug -t nodejs && vitest",
-        "instrument": "wasm-pack build --debug -t nodejs && node src/js/instrument.js"
+        "instrument": "wasm-pack build --debug -t nodejs && node src/js/instrument.js",
+        "merge": "node src/js/merge.js"
     },
     "devDependencies": {
         "copyfiles": "^2.3.0",
