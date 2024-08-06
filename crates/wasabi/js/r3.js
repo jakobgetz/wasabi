@@ -1,3 +1,5 @@
+const MEM_PAGE_SIZE = 65536;
+
 WebAssembly.Memory.prototype.get = function (addr) {
   return new Uint8Array(this.buffer)[addr];
 };
@@ -7,7 +9,6 @@ WebAssembly.Memory.prototype.set = function (addr, value) {
 };
 
 class Trace {
-  trace;
   constructor() {
     this.trace = [];
   }
@@ -21,16 +22,9 @@ class Trace {
 }
 
 class Analysis {
-  trace = new Trace();
   Wasabi;
-  // shadow stuff
-  funcrefToIdx;
-  // helpers
+  trace = new Trace();
   callStack = [{ idx: -1 }];
-  MEM_PAGE_SIZE = 65536;
-  getResult() {
-    return this.trace;
-  }
   constructor(Wasabi) {
     this.Wasabi = Wasabi;
     Wasabi.analysis = {
@@ -98,7 +92,7 @@ class Analysis {
       memory_grow: (location, deltaPages, previousSizePages) => {
         // TODO: get from Wasabi
         const memIdx = 0;
-        this.growShadowMem(memIdx, deltaPages);
+        this.shadowMemories[memIdx].grow(deltaPages);
       },
       global: (location, op, globalIndex, value) => {
         if (op === "global.set") {
@@ -140,22 +134,18 @@ class Analysis {
     }
     return true;
   }
+  // TODO: measure slowdown of this check
   checkMemGrow() {
     this.memories.forEach((mem, idx) => {
       if (mem.buffer.byteLength !== this.shadowMemories[idx].buffer.byteLength) {
-        let amount = mem.buffer.byteLength / this.MEM_PAGE_SIZE - this.shadowMemories[idx].buffer.byteLength / this.MEM_PAGE_SIZE;
-        this.growShadowMem(idx, amount);
+        const memPageSize = mem.buffer.byteLength / MEM_PAGE_SIZE;
+        const shadowMemPageSize = this.shadowMemories[idx].buffer.byteLength / MEM_PAGE_SIZE;
+        let amount = memPageSize - shadowMemPageSize;
+        this.shadowMemories[idx].grow(amount);
         this.trace.push(`MG;${idx};${amount}`
         );
       }
     });
-  }
-  growShadowMem(memIdx, byPages) {
-    const currentPages = this.shadowMemories[memIdx].buffer.byteLength / this.MEM_PAGE_SIZE;
-    const newPages = currentPages + byPages;
-    const newShadow = new WebAssembly.Memory({ initial: newPages, maximum: newPages });
-    new Uint8Array(newShadow.buffer).set(new Uint8Array(this.shadowMemories[memIdx].buffer));
-    this.shadowMemories[memIdx] = newShadow;
   }
   // checkTableGrow() {
   //   this.tables.forEach((t, idx) => {
@@ -226,10 +216,10 @@ class Analysis {
       }
     }
     this.Wasabi.module.info.memories.forEach((memInfo) => {
-      const { initial, maximum, } = memInfo;
+      const { initial } = memInfo;
       const originalMemory = this.Wasabi.module.exports[memInfo.export[0]];
       // TODO: make this set by maximum
-      const shadowMemory = new WebAssembly.Memory({ initial, maximum: initial });
+      const shadowMemory = new WebAssembly.Memory({ initial });
       // when the memory is not imported, the initial content is completely determined by the wasm binary
       if (memInfo.import === null) new Uint8Array(shadowMemory.buffer).set(new Uint8Array(originalMemory.buffer));
       this.memories.push(originalMemory);
@@ -330,8 +320,7 @@ function setup() {
     importObject = importObjectWithHooks(importObject, this_i);
     const analysis = new Analysis(wasabis[this_i])
     self.analysis.push(analysis);
-    let result;
-    result = original_instantiate(buffer, importObject);
+    const result = original_instantiate(buffer, importObject);
     result.then(({ module, instance }) => {
       wireInstanceExports(instance, this_i);
       self.analysis[this_i].init();
