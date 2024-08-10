@@ -208,7 +208,7 @@ class Analysis {
       if (typeof funcref == "function") {
         let fidx;
         this.Wasabi.module.info.functions.forEach((f, i) => {
-          if (f.export !== null && f.export[0] === exp) {
+          if (f.export.includes(exp)) {
             fidx = i;
           }
         });
