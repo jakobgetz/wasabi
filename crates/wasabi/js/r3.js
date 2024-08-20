@@ -306,7 +306,7 @@ function setup() {
   WebAssembly.instantiate = function (buffer, importObject) {
     buffer = buffer.byte ? buffer.byte : buffer;
     // Download the wasm binary
-    // downloadBinary(buffer);
+    downloadBinary(buffer);
     const this_i = i;
     i += 1;
     // const p_instantiationTime = performanceEvent(`Time to instantiate wasm module ${this_i}`)
